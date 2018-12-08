@@ -7,7 +7,7 @@ class Logger:
     """Python Logger class"""
     __LOGGER = None
     __DEFAULT_FORMAT = "%(asctime)s : %(name)s : %(levelname)s : %(message)s"
-    __DEFAULT_LOG_LEVEL = "info"
+    __DEFAULT_LOG_LEVEL = "debug"
     __LOG_LEVELS = {
         "critical": logging.CRITICAL,
         "error": logging.ERROR,
