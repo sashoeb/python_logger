@@ -6,12 +6,15 @@ import sys
 class Logger:
     """Python Logger class"""
     __LOGGER = None
-    __PATH = None
     __DEFAULT_FORMAT = "%(asctime)s : %(name)s : %(levelname)s : %(message)s"
     __DEFAULT_LOG_LEVEL = "info"
     __LOG_LEVELS = {
+        "critical": logging.CRITICAL,
+        "error": logging.ERROR,
+        "warning": logging.WARNING,
         "info": logging.INFO,
-        "debug": logging.DEBUG
+        "debug": logging.DEBUG,
+        "unset": logging.NOTSET,
     }
 
     def __init__(self, name, log_level=__DEFAULT_LOG_LEVEL, log_format=__DEFAULT_FORMAT):
@@ -30,7 +33,7 @@ class Logger:
         pass
 
     def __get_log_level(self, log_level):
-        log_level = self.__LOG_LEVELS.get(log_level.lower())
+        log_level = self.__LOG_LEVELS.get(log_level.lower(), logging.NOTSET)
         return log_level
 
     def __init_log_file(self, service_name, log_level):
