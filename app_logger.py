@@ -1,9 +1,9 @@
 """Generic Class for Python Logging"""
+import cgitb
 from datetime import datetime
 import logging
 import requests
 import sys
-import traceback
 
 from email_config import MAILGUN, NOTIFICATIONS
 
@@ -21,9 +21,11 @@ class Logger:
         "debug": logging.DEBUG,
         "unset": logging.NOTSET,
     }
+    __SEND_ALERT = True
 
-    def __init__(self, name, log_level=__DEFAULT_LOG_LEVEL, log_format=__DEFAULT_FORMAT):
+    def __init__(self, name, log_level=__DEFAULT_LOG_LEVEL, log_format=__DEFAULT_FORMAT, send_alerts=__SEND_ALERT):
         """Initializes the logger"""
+        self.__SEND_ALERT = send_alerts
         log_level = self.__get_log_level(log_level)
         self.__init_log_file(name, log_level)
         self.__set_log_level(log_level)
@@ -76,6 +78,12 @@ class Logger:
         else:
             return result
 
+    def _send_stacktrace(self):
+        """Sends the stacktrace to the email IDs"""
+        error = cgitb.html(sys.exc_info())
+        subject = "Exception occurred in service: %s" % self.__SERVICE_NAME
+        self._send_mailgun(error, subject)
+
     @property
     def LOGGER(self):
         """Returns the LOGGER object"""
@@ -90,10 +98,10 @@ class Logger:
         self.__LOGGER.debug(message)
 
     def exception(self, message):
-        """Prints exception message"""
+        """Prints exception message and sends stacktrace if enabled"""
         self.__LOGGER.exception(message)
-        error = traceback.format_exc()
-        self._send_mailgun(error, "Error in service : %s" % str(self.__SERVICE_NAME))
+        if self.__SEND_ALERT:
+            self._send_stacktrace()
 
     def error(self, message):
         """Prints error message"""

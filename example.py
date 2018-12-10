@@ -1,6 +1,6 @@
 from app_logger import Logger
 
-LOGGER = Logger(name="example_app", log_level="debug")
+LOGGER = Logger(name="example_app", log_level="debug", send_alerts=False)
 try:
     LOGGER.info("This is an info statement.")
     LOGGER.debug("This is a debug statement with a value: %s" % str(123.456))
