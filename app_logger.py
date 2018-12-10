@@ -1,6 +1,11 @@
 """Generic Class for Python Logging"""
+from datetime import datetime
 import logging
+import requests
 import sys
+import traceback
+
+from email_config import MAILGUN, NOTIFICATIONS
 
 
 class Logger:
@@ -38,7 +43,8 @@ class Logger:
 
     def __init_log_file(self, service_name, log_level):
         """Initializes the logger object"""
-        self.__LOGGER = logging.getLogger(service_name)
+        self.__SERVICE_NAME = service_name
+        self.__LOGGER = logging.getLogger(self.__SERVICE_NAME)
         self.__LOGGER.setLevel(log_level)
 
     def __set_log_level(self, log_level):
@@ -50,6 +56,25 @@ class Logger:
         self.__FORMATTER = logging.Formatter(log_format)
         self.__CONSOLE_HANDLER.setFormatter(self.__FORMATTER)
         self.__LOGGER.addHandler(self.__CONSOLE_HANDLER)
+
+    def _send_mailgun(self, html_data, subject):
+        try:
+            result = requests.post(
+                MAILGUN["url"],
+                auth=("api", MAILGUN["api_key"]),
+                data={
+                    "from": "%s LOGGER" % str(self.__SERVICE_NAME),
+                    "to": NOTIFICATIONS,
+                    "subject": subject,
+                    "html": html_data
+                }
+            )
+        except Exception as e:
+            print datetime.utcnow(), ": send_mailgun error :", e.message
+            print "Error in sending email. ", e.message
+            return False
+        else:
+            return result
 
     @property
     def LOGGER(self):
@@ -67,6 +92,8 @@ class Logger:
     def exception(self, message):
         """Prints exception message"""
         self.__LOGGER.exception(message)
+        error = traceback.format_exc()
+        self._send_mailgun(error, "Error in service : %s" % str(self.__SERVICE_NAME))
 
     def error(self, message):
         """Prints error message"""
