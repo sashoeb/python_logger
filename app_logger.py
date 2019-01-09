@@ -65,7 +65,7 @@ class Logger:
                 MAILGUN["url"],
                 auth=("api", MAILGUN["api_key"]),
                 data={
-                    "from": "%s LOGGER" % str(self.__SERVICE_NAME),
+                    "from": MAILGUN["from"],
                     "to": NOTIFICATIONS,
                     "subject": subject,
                     "html": html_data
