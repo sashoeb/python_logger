@@ -22,9 +22,19 @@ class Logger:
         "unset": logging.NOTSET,
     }
     __SEND_ALERT = True
+    __IS_SERVICE = False
+    __INSTANCE = socket.gethostname()
 
-    def __init__(self, name, log_level=__DEFAULT_LOG_LEVEL, log_format=__DEFAULT_FORMAT, send_alerts=__SEND_ALERT):
+
+    def __init__(self, name, log_level=__DEFAULT_LOG_LEVEL, log_format=__DEFAULT_FORMAT, send_alerts=__SEND_ALERT,
+                 is_service=__IS_SERVICE, instance=__INSTANCE):
         """Initializes the logger"""
+        self.__INSTANCE = instance
+        if is_service:
+            subject = "[%s] Service: %s started" % (instance, name)
+            email = "<body><p>Service %s has started at: %s UTC</p></body>" % (name, str(datetime.utcnow()))
+            self._send_mailgun(email, subject)
+
         self.__SEND_ALERT = send_alerts
         log_level = self.__get_log_level(log_level)
         self.__init_log_file(name, log_level)
