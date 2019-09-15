@@ -1,6 +1,7 @@
 """Generic Class for Python Logging"""
 import cgitb
 from datetime import datetime
+from functools import wraps
 import logging
 import requests
 import socket
@@ -96,6 +97,26 @@ class Logger:
         error = cgitb.html(sys.exc_info())
         subject = "[%s] Exception occurred in service: %s" % (self.__INSTANCE, self.__SERVICE_NAME)
         self._send_mailgun(error, subject)
+
+    def protect_method(self, method=None, exception_response=None):
+        """Returns a wrapper function which adds the try and catch block to the supplied method.
+        If exception is raised in supplied func, then exception response is returned.
+        """
+        def override_exception_return(protected_method):
+            @wraps(protected_method)
+            def print_method_access(*args, **kwargs):
+                method_response = exception_response
+                try:
+                    method_response = protected_method(*args, **kwargs)
+                except Exception as e:
+                    self.exception(e)
+                return method_response
+            print_method_access.__name__ = protected_method.__name__
+            return print_method_access
+        if not method:
+            return override_exception_return
+        override_exception_return.__name__ = method.__name__
+        return override_exception_return(protected_method=method)
 
     @property
     def LOGGER(self):
