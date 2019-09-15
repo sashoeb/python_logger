@@ -1,8 +1,10 @@
 """Generic Class for Python Logging"""
 import cgitb
 from datetime import datetime
+from functools import wraps
 import logging
 import requests
+import socket
 import sys
 
 from email_config import MAILGUN, NOTIFICATIONS
@@ -22,9 +24,19 @@ class Logger:
         "unset": logging.NOTSET,
     }
     __SEND_ALERT = True
+    __IS_SERVICE = False
+    __INSTANCE = socket.gethostname()
 
-    def __init__(self, name, log_level=__DEFAULT_LOG_LEVEL, log_format=__DEFAULT_FORMAT, send_alerts=__SEND_ALERT):
+
+    def __init__(self, name, log_level=__DEFAULT_LOG_LEVEL, log_format=__DEFAULT_FORMAT, send_alerts=__SEND_ALERT,
+                 is_service=__IS_SERVICE, instance=__INSTANCE):
         """Initializes the logger"""
+        self.__INSTANCE = instance
+        if is_service:
+            subject = "[%s] Service: %s started" % (instance, name)
+            email = "<body><p>Service %s has started at: %s UTC</p></body>" % (name, str(datetime.utcnow()))
+            self._send_mailgun(email, subject)
+
         self.__SEND_ALERT = send_alerts
         log_level = self.__get_log_level(log_level)
         self.__init_log_file(name, log_level)
@@ -46,8 +58,11 @@ class Logger:
     def __init_log_file(self, service_name, log_level):
         """Initializes the logger object"""
         self.__SERVICE_NAME = service_name
-        self.__LOGGER = logging.getLogger(self.__SERVICE_NAME)
-        self.__LOGGER.setLevel(log_level)
+        self.__LOGGER = logging.Logger(self.__SERVICE_NAME, log_level)
+        self.info = self.__LOGGER.info
+        self.debug = self.__LOGGER.debug
+        self.error = self.__LOGGER.error
+        self.warning = self.__LOGGER.warning
 
     def __set_log_level(self, log_level):
         """Sets the Log level"""
@@ -72,8 +87,7 @@ class Logger:
                 }
             )
         except Exception as e:
-            print datetime.utcnow(), ": send_mailgun error :", e.message
-            print "Error in sending email. ", e.message
+            self.__LOGGER.error("Error in sending email. Exception : %s " % e.message)
             return False
         else:
             return result
@@ -81,28 +95,36 @@ class Logger:
     def _send_stacktrace(self):
         """Sends the stacktrace to the email IDs"""
         error = cgitb.html(sys.exc_info())
-        subject = "Exception occurred in service: %s" % self.__SERVICE_NAME
+        subject = "[%s] Exception occurred in service: %s" % (self.__INSTANCE, self.__SERVICE_NAME)
         self._send_mailgun(error, subject)
+
+    def protect_method(self, method=None, exception_response=None):
+        """Returns a wrapper function which adds the try and catch block to the supplied method.
+        If exception is raised in supplied func, then exception response is returned.
+        """
+        def override_exception_return(protected_method):
+            @wraps(protected_method)
+            def print_method_access(*args, **kwargs):
+                method_response = exception_response
+                try:
+                    method_response = protected_method(*args, **kwargs)
+                except Exception as e:
+                    self.exception(e)
+                return method_response
+            print_method_access.__name__ = protected_method.__name__
+            return print_method_access
+        if not method:
+            return override_exception_return
+        override_exception_return.__name__ = method.__name__
+        return override_exception_return(protected_method=method)
 
     @property
     def LOGGER(self):
         """Returns the LOGGER object"""
         return self.__LOGGER
 
-    def info(self, message):
-        """Prints info message"""
-        self.__LOGGER.info(message)
-
-    def debug(self, message):
-        """Prints debug message"""
-        self.__LOGGER.debug(message)
-
     def exception(self, message):
         """Prints exception message and sends stacktrace if enabled"""
         self.__LOGGER.exception(message)
         if self.__SEND_ALERT:
             self._send_stacktrace()
-
-    def error(self, message):
-        """Prints error message"""
-        self.__LOGGER.error(message)
