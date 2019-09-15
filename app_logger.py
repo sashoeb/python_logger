@@ -86,8 +86,7 @@ class Logger:
                 }
             )
         except Exception as e:
-            print datetime.utcnow(), ": send_mailgun error :", e.message
-            print "Error in sending email. ", e.message
+            self.__LOGGER.error("Error in sending email. Exception : %s " % e.message)
             return False
         else:
             return result
@@ -95,7 +94,7 @@ class Logger:
     def _send_stacktrace(self):
         """Sends the stacktrace to the email IDs"""
         error = cgitb.html(sys.exc_info())
-        subject = "Exception occurred in service: %s" % self.__SERVICE_NAME
+        subject = "[%s] Exception occurred in service: %s" % (self.__INSTANCE, self.__SERVICE_NAME)
         self._send_mailgun(error, subject)
 
     @property
