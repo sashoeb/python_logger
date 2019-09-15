@@ -3,6 +3,7 @@ import cgitb
 from datetime import datetime
 import logging
 import requests
+import socket
 import sys
 
 from email_config import MAILGUN, NOTIFICATIONS
