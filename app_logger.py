@@ -26,7 +26,7 @@ class Logger:
     __SEND_ALERT = True
     __IS_SERVICE = False
     __INSTANCE = socket.gethostname()
-    _CUSTOM_ERR_HANDLER = None
+    __CUSTOM_ERR_HANDLER = None
 
 
     def __init__(self, name, log_level=__DEFAULT_LOG_LEVEL, log_format=__DEFAULT_FORMAT, send_alerts=__SEND_ALERT,
@@ -127,14 +127,14 @@ class Logger:
     def exception(self, message):
         """Prints exception message and sends stacktrace if enabled"""
         self.__LOGGER.exception(message)
-        if self.__SEND_ALERT and not self._CUSTOM_ERR_HANDLER:
+        if self.__SEND_ALERT and not self.__CUSTOM_ERR_HANDLER:
             self._send_stacktrace()
-        if self._CUSTOM_ERR_HANDLER:
-            func_name = self._CUSTOM_ERR_HANDLER.__name__
+        if self.__CUSTOM_ERR_HANDLER:
+            func_name = self.__CUSTOM_ERR_HANDLER.__name__
             self.__LOGGER.debug("Executing custom error handler %s" % func_name)
             traceback = cgitb.traceback
             exec_info = sys.exc_info()
-            self._CUSTOM_ERR_HANDLER(traceback, exec_info)
+            self.__CUSTOM_ERR_HANDLER(traceback, exec_info)
             self.__LOGGER.debug("Executed custom error handler")
 
     def set_custom_error_handler(self, func):
@@ -147,6 +147,6 @@ class Logger:
             self.__LOGGER.error("NEED A FUNCTION AS AN ARGUMENT")
             self.__LOGGER.error("CUSTOM ERROR HANDLER NOT SET")
             return False
-        self._CUSTOM_ERR_HANDLER = func
+        self.__CUSTOM_ERR_HANDLER = func
         self.__LOGGER.debug("Custom error handler set")
         return True
