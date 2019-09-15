@@ -57,8 +57,11 @@ class Logger:
     def __init_log_file(self, service_name, log_level):
         """Initializes the logger object"""
         self.__SERVICE_NAME = service_name
-        self.__LOGGER = logging.getLogger(self.__SERVICE_NAME)
-        self.__LOGGER.setLevel(log_level)
+        self.__LOGGER = logging.Logger(self.__SERVICE_NAME, log_level)
+        self.info = self.__LOGGER.info
+        self.debug = self.__LOGGER.debug
+        self.error = self.__LOGGER.error
+        self.warning = self.__LOGGER.warning
 
     def __set_log_level(self, log_level):
         """Sets the Log level"""
@@ -100,20 +103,8 @@ class Logger:
         """Returns the LOGGER object"""
         return self.__LOGGER
 
-    def info(self, message):
-        """Prints info message"""
-        self.__LOGGER.info(message)
-
-    def debug(self, message):
-        """Prints debug message"""
-        self.__LOGGER.debug(message)
-
     def exception(self, message):
         """Prints exception message and sends stacktrace if enabled"""
         self.__LOGGER.exception(message)
         if self.__SEND_ALERT:
             self._send_stacktrace()
-
-    def error(self, message):
-        """Prints error message"""
-        self.__LOGGER.error(message)
