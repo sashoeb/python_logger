@@ -137,3 +137,16 @@ class Logger:
             self._CUSTOM_ERR_HANDLER(traceback, exec_info)
             self.__LOGGER.debug("Executed custom error handler")
 
+    def set_custom_error_handler(self, func):
+        """Sets a custom handler to be executed during exception.
+        The function should accept two arguments traceback and exec_info.
+        Returns True if able to set else False.
+        """
+        self.__LOGGER.debug("Setting custom error handler")
+        if not callable(func):
+            self.__LOGGER.error("NEED A FUNCTION AS AN ARGUMENT")
+            self.__LOGGER.error("CUSTOM ERROR HANDLER NOT SET")
+            return False
+        self._CUSTOM_ERR_HANDLER = func
+        self.__LOGGER.debug("Custom error handler set")
+        return True
