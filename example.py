@@ -1,5 +1,8 @@
 import sys
+import time
+
 from app_logger import Logger
+
 
 LOGGER = Logger(name="example_app", log_level="debug", send_alerts=False)
 try:
@@ -32,7 +35,7 @@ def my_err_handler(traceback, exec_info):
     print traceback.format_exception(exp_type, exp_value, exp_traceback)
     print "End of custom function"
 
-with Logger(name="CUSTOM_ERROR_HANDLER", send_alerts=True) as LOGGER:
+with Logger(name="CUSTOM_ERROR_HANDLER", send_alerts=False) as LOGGER:
     try:
         LOGGER.info("Custom error handling example")
         LOGGER.debug("Will execute a function given by you in case of exception")
@@ -51,3 +54,21 @@ with Logger(name="CUSTOM_ERROR_HANDLER", send_alerts=True) as LOGGER:
     except Exception as e:
         LOGGER.error("Encountered error second_example_app")
         LOGGER.exception(e)
+
+server_ip = "XXXX"
+api_key = "XXXX"
+user_name = "XXXX"
+password = "XXXX"
+LOGGER = Logger(name="example_app_remote", log_level="debug", send_alerts=False)
+LOGGER.enable_remote_control(remote_server_ip=server_ip, remote_control_key=api_key, user_name=user_name,
+                             password=password)
+while True:
+    try:
+        LOGGER.info("This is an info statement.")
+        # print (0/0)
+        # LOGGER.debug("This is a debug statement with a value: %s" % str(123.456))
+        time.sleep(1)
+    except Exception as e:
+        LOGGER.error("Encountered an error in example_app_remote")
+        LOGGER.exception(e)
+        time.sleep(5)
