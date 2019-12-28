@@ -2,7 +2,9 @@
 import cgitb
 from datetime import datetime
 from functools import wraps
+import json
 import logging
+import paho.mqtt.client as mqtt
 import requests
 import socket
 import sys
@@ -33,6 +35,7 @@ class Logger:
                  is_service=__IS_SERVICE, instance=__INSTANCE):
         """Initializes the logger"""
         self.__INSTANCE = instance
+        self.__logger_name = name
         if is_service:
             subject = "[%s] Service: %s started" % (instance, name)
             email = "<body><p>Service %s has started at: %s UTC</p></body>" % (name, str(datetime.utcnow()))
@@ -43,6 +46,11 @@ class Logger:
         self.__init_log_file(name, log_level)
         self.__set_log_level(log_level)
         self.__set_log_format(log_format)
+        self.is_remote_control_enabled = False
+        self.available_functions = {
+            "disconnect": self.disable_remote_control,
+            "test": self.my_func
+        }
 
     def __enter__(self):
         """Use with for invocation"""
@@ -127,6 +135,8 @@ class Logger:
     def exception(self, message):
         """Prints exception message and sends stacktrace if enabled"""
         self.__LOGGER.exception(message)
+        if self.__mqtt_client:
+            self.__mqtt_client.publish(self.__topic, json.dumps({"status": "exception", "message": str(message)}))
         if self.__SEND_ALERT and not self.__CUSTOM_ERR_HANDLER:
             self._send_stacktrace()
         if self.__CUSTOM_ERR_HANDLER:
@@ -150,3 +160,54 @@ class Logger:
         self.__CUSTOM_ERR_HANDLER = func
         self.__LOGGER.debug("Custom error handler set")
         return True
+
+    def enable_remote_control(self, remote_server_ip, remote_control_key, user_name=None, password=None):
+        """Enables control via a remote server"""
+        self.__LOGGER.info("Enabling remote control. Server IP: %s Key: %s" % (remote_server_ip, remote_control_key))
+        self.__topic = "remote_logger/" + self.__INSTANCE + "/" + self.__logger_name + "/" + remote_control_key
+        print "Topic:", self.__topic
+        self.__mqtt_client = mqtt.Client(self.__topic)
+        print "client", self.__mqtt_client
+        if user_name and password:
+            self.__mqtt_client.username_pw_set(user_name, password)
+        self.__mqtt_client.connect_async(host=remote_server_ip, port=1883, keepalive=10)
+        self.__mqtt_client.on_connect = self.__establish_connection
+        self.__mqtt_client.on_message = self.on_message
+        self.__mqtt_client.enable_logger(logger=self.__LOGGER)
+        self.__mqtt_client.loop_start()
+
+    def disable_remote_control(self):
+        """Disables the remote control fuctionality"""
+        if not self.__mqtt_client:
+            return True
+        self.__mqtt_client.disconnect()
+        self.is_remote_control_enabled = False
+
+    def __establish_connection(self, client, userdata, flags, rc):
+        print "establishing connection"
+        print "topic: ", self.__topic
+        client.subscribe(self.__topic)
+        print "user data", userdata
+        type(userdata)
+        print "flags", flags
+        type(flags)
+        print "result code", rc
+        type(rc)
+        self.is_remote_control_enabled = True
+
+    def on_message(self, client, userdata, msg):
+        print "*" * 15
+        print "received message"
+        print msg.topic, ": ", msg.payload, type(msg.payload)
+        print "user data: ", userdata
+        payload = json.loads(msg.payload)
+        function = payload.get("function", None)
+        if function:
+            if function in self.available_functions.has_key(function):
+                function(payload)
+        print "*" * 15
+
+    def my_func(self, payload):
+        """Custom function"""
+        print "my func called"
+        print "This is the payload", payload
